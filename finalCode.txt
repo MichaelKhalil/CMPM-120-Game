@@ -1,0 +1,182 @@
+<html>
+  <head>
+    <style>
+      #container{
+        font-family:monospace;
+        font-weight:bold;
+      }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  </head>
+  
+  <body>
+    <canvas id = "finalgame" width = "500" height = "500"></canvas>
+    
+    <script>
+        canvas = document.getElementById('finalgame');
+        context = canvas.getContext('2d');
+        document.addEventListener('keydown', handleKeypress);
+      
+        var cellWidth = canvas.width/25;
+        var sounds = new Array();
+        //                      wall                            move wall                       node                              player
+        var sources = new Array("http://imgur.com/wbBhJwz.png", "http://imgur.com/Weo7wKb.png", "http://imgur.com/Ad5ZyRQ.png", "http://imgur.com/DtRU92q.png");
+        //                            up                           down                            right                              left
+        var playerSources = new Array("http://imgur.com/Te50MqO.png", "http://imgur.com/hZ9cFbq.png", "http://imgur.com/80z9vLc.png", "http://imgur.com/RfKPi7c.png")
+        var walls = new Array();
+        var direction = 'down';
+        
+        //wall types
+        var WALL_NONMOVEABLE = 0;
+        var WALL_MOVEABLE = 1;
+        var WALL_NODE = 2;
+        
+      
+        
+        function handleKeypress(e){
+            switch(e.keyCode){
+                case 38 : //upwards
+                case 87 :
+                    direction = 'up';
+                    break;
+                case 40 : //downwards
+                case 83 :     
+                    direction = 'down';
+                    break;
+                case 39 : //right
+                case 68 :
+                    direction = 'right';
+                    break;
+                case 37 : //left
+                case 65 :
+                    direction = 'left';
+                    break;          
+            }
+        }
+        
+            
+        function Wall(x, y, type){
+            this.x = x*cellWidth;
+            this.y = y*cellWidth;
+            this.type = type;
+            //this.isSolid = this.type == WALL_MOVEABLE || this.type = WALL_NONMOVEABLE ? true: false;
+            this.img = new Image();
+            this.img.src = sources[this.type];
+            
+            this.draw = function(){
+                context.drawImage(this.img, this.x, this.y, cellWidth, cellWidth);
+            }
+        }
+        //test
+        //walls.push(new Wall(1,0,0),new Wall(2,0,0),new Wall(3,0,0),new Wall(0,1,0),new Wall(5,5,1),new Wall(6,6,2));
+        
+        for (var i = 0; i < canvas.width/cellWidth;i++){
+            for (var j = 0; j < canvas.height/cellWidth;j++){
+               if (j == 0 || i == 0 || 
+                   j == (canvas.height-cellWidth)/cellWidth ||
+                   i == (canvas.width-cellWidth)/cellWidth)
+                   walls.push(new Wall(i,j,0));
+               else if(i == 4 || j == 4 || j == 21 || i == 21)
+                   walls.push(new Wall(i,j,Math.floor(Math.random()*3)));
+                 
+            }
+        }
+        
+        
+        
+        function Player(x, y){
+            this.x = x*cellWidth;
+            this.y = y*cellWidth;
+            this.img = new Image;
+            this.img.src = playerSources[0];
+    
+            this.draw = function(){
+                context.drawImage(this.img, this.x, this.y, cellWidth, cellWidth);
+            }
+            this.update = function(){
+                nextX = this.x;
+                nextY = this.y;
+                switch(direction){
+                    case 'up':
+                        this.img.src = playerSources[0];
+                        nextY -= cellWidth;
+                        break;
+                    case 'down':
+                        this.img.src = playerSources[1];
+                        nextY += cellWidth;
+                        break;
+                    case 'right': 
+                        this.img.src = playerSources[2];
+                        nextX += cellWidth;
+                        break;
+                    case 'left':
+                        this.img.src = playerSources[3];
+                        nextX -= cellWidth;
+                        break;
+                }
+                if(!(isCollide(nextX, nextY, direction))){
+                this.x = nextX;
+                this.y = nextY;
+                }
+                direction = 'neutral';
+
+            }
+        }
+        //-------------------------------------------------------------------------------------------------------
+        var player = new Player(10,10);
+     
+        function isCollide(x1, y1, dir){
+            //return (x1 == x2 && y1 == y2);  
+            for(i in walls)
+                if (walls[i].x == x1 && walls[i].y == y1 && walls[i].type == 0)
+                    return true;
+            if (walls[i].x == x1 && walls[i].y == y1 && walls[i].type == 1)
+                switch(direction){
+                    case 'up':
+                        for (j in walls)
+                        if(walls[j].y != y1-cellWidth && walls[j].x != x1){
+                            walls[i].y -= cellWidth;
+                        }
+
+                        break;
+                    case 'down':
+                        
+                        break;
+                    case 'right': 
+     
+                        break;
+                    case 'left':
+
+                        break;
+
+        }
+        }
+        //----------------------------------------------------------------------trying to get blue square to move
+        function update(){
+          player.update();
+        }
+        
+        function draw(){
+          canvas.width = canvas.width;
+          //draw background
+            context.fillStyle = "#995547";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+          //draw walls
+            for(var i in walls)
+                walls[i].draw();
+          //draw player
+            player.draw();
+        }  
+        
+        function game_loop(){
+          update();
+          draw();
+        }
+      
+           
+      setInterval(game_loop, 30);
+      
+      </script>
+
+  </body>
+</html>
