@@ -125,7 +125,7 @@
         //-------------------------------------------------------------------------------------------------------
         var player = new Player(10,10);
      
-        function isCollide(x1, y1, dir){
+        /*function isCollide(x1, y1, dir){
             //return (x1 == x2 && y1 == y2);  
             for(i in walls)
                 if (walls[i].x == x1 && walls[i].y == y1 && walls[i].type == 0)
@@ -150,8 +150,61 @@
                         break;
 
         }
-        }
+        }*/
         //----------------------------------------------------------------------trying to get blue square to move
+	function isCollide(x1, y1, dir){
+            //return (x1 == x2 && y1 == y2);  
+            for(i in walls){
+                if (walls[i].x == x1 && walls[i].y == y1 && walls[i].type == 0)
+                    return true;
+                if (walls[i].x == x1 && walls[i].y == y1 && walls[i].type == 1){
+                    switch(direction){
+                        case 'up':
+                            var wallPos = wallAt(x1,y1-cellWidth);
+                            if (wallPos != -1){
+                                if (walls[wallPos].isSolid)
+                                    return true;
+                            }
+                            walls[i].y -= cellWidth;
+                            break;
+                        case 'down':
+                            var wallPos = wallAt(x1,y1+cellWidth);
+                            if (wallPos != -1){
+                                if (walls[wallPos].isSolid)
+                                    return true;
+                            }
+                            walls[i].y += cellWidth;
+                            break;
+                        case 'right': 
+                            var wallPos = wallAt(x1+cellWidth,y1);
+                            if (wallPos != -1){
+                                if (walls[wallPos].isSolid)
+                                    return true;
+                            }
+                            walls[i].x += cellWidth;
+                            break;
+                        case 'left':
+                            var wallPos = wallAt(x1-cellWidth,y1);
+                            if (wallPos != -1){
+                                if (walls[wallPos].isSolid)
+                                    return true;
+                            }
+                            walls[i].x -= cellWidth;
+                            break;
+                    }
+
+                }
+            }
+            return false;
+        }
+ //returns index of wall in walls, -1 if not found
+        function wallAt(x,y){
+            for (var i in walls){
+                if (walls[i].x == x && walls[i].y == y)
+                    return i;
+            }
+            return -1;
+        }
         function update(){
           player.update();
         }
