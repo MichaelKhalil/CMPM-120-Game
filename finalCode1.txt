@@ -1,0 +1,300 @@
+<html>
+  <head>
+    <style>
+      #container{
+        font-family:monospace;
+        font-weight:bold;
+      }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  </head>
+  
+  <body>
+    <canvas id = "finalgame" width = "500" height = "500"></canvas>
+    
+    <script>
+        canvas = document.getElementById('finalgame');
+        context = canvas.getContext('2d');
+        document.addEventListener('keydown', handleKeypress);
+      
+        var cellWidth = canvas.width/25;
+        var sounds = new Array();
+        //                      Block                            move Block                       node                              player
+        var sources = new Array("http://imgur.com/wbBhJwz.png", "http://imgur.com/Weo7wKb.png", "http://imgur.com/Ad5ZyRQ.png", "http://imgur.com/DtRU92q.png");
+        //                            up                           down                            right                              left
+        var playerSources = new Array("http://imgur.com/Te50MqO.png", "http://imgur.com/hZ9cFbq.png", "http://imgur.com/80z9vLc.png", "http://imgur.com/RfKPi7c.png")
+        var blocks = new Array();
+        var direction = 'down';
+        
+        //Block types
+        var Block_NONMOVEABLE = 0;
+        var Block_MOVEABLE = 1;
+        var Block_NODE = 2;
+        var bc = "brown";
+        var level1 = new Array(
+        "                         ", // 0  # = wall
+        "          #####          ", // 1  . = available nodes
+        "          #   #          ", // 2  & = player
+        "          ##@##          ", // 3  @ = movable block
+        "           # #           ", // 4  
+        "           # #           ", // 5  
+        "          #. .#          ", // 6 something like this
+        "          #. .#          ", // 7
+        "           # #           ", // 8
+        "                         ", // 9
+        "                         ", //10
+        "                         ", //11
+        "                         ", //12
+        "                         ", //13
+        "                         ", //14
+        "                         ", //15
+        "                         ", //16
+        "                         ", //17
+        "                         ", //18
+        "                         ", //19
+        "                         ", //20
+        "                         ", //21
+        "                         ", //22
+        "                         ", //23
+        "                         ");//24
+      
+        
+        function handleKeypress(e){
+            switch(e.keyCode){
+                case 38 : //upwards
+                case 87 :
+                    direction = 'up';
+                    break;
+                case 40 : //downwards
+                case 83 :     
+                    direction = 'down';
+                    break;
+                case 39 : //right
+                case 68 :
+                    direction = 'right';
+                    break;
+                case 37 : //left
+                case 65 :
+                    direction = 'left';
+                    break;          
+            }
+        }
+        
+            
+        function Block(x, y, type){
+            this.x = x*cellWidth;
+            this.y = y*cellWidth;
+            this.type = type;
+            this.isSolid = this.type == Block_MOVEABLE || this.type == Block_NONMOVEABLE ? true : false;
+            this.img = new Image();
+            this.img.src = sources[this.type];
+            
+            this.draw = function(){
+                context.drawImage(this.img, this.x, this.y, cellWidth, cellWidth);
+            }
+        }
+        
+        function loadLevel(level){
+            
+            for(i in level)
+                for (j in level){
+                    switch(level[i][j])
+                        {
+                        case "#" :
+                        blocks.push(new Block(j, i, 0));
+                        break;
+                        case "@" :
+                        blocks.push(new Block(j, i, 1));
+                        break;
+                        case "." :
+                        blocks.push(new Block(j, i, 2));
+                        break;
+                       // case "&" :
+                      //      player.x = i;
+                       //     player.y = j;
+                      //      break;
+                        }
+                }       
+        }
+        
+        
+        //test
+        //blocks.push(new Block(1,0,0),new Block(2,0,0),new Block(3,0,0),new Block(0,1,0),new Block(5,5,1),new Block(6,6,2));
+        
+        //test level
+        /*
+        for (var i = 0; i < canvas.width/cellWidth;i++){
+            for (var j = 0; j < canvas.height/cellWidth;j++){
+               if (j == 0 || i == 0 || 
+                   j == (canvas.height-cellWidth)/cellWidth ||
+                   i == (canvas.width-cellWidth)/cellWidth)
+                   blocks.push(new Block(i,j,0));
+               else if(i == 4 || j == 4 || j == 21 || i == 21)
+                   blocks.push(new Block(i,j,0));
+                 
+            }
+        }
+        
+        blocks.push(new Block(8,8,2));
+        blocks.push(new Block(7,8,1));
+        blocks.push(new Block(12,12,2));
+        blocks.push(new Block(13,12,1));
+        */
+        
+        //returns index of Block in blocks, -1 if not found
+        function blockAt(x,y){
+            for (var i in blocks){
+                if (blocks[i].x == x && blocks[i].y == y)
+                    return i;
+            }
+            return -1;
+        }
+        
+        function Player(x, y){
+            this.x = x*cellWidth;
+            this.y = y*cellWidth;
+            this.img = new Image;
+            this.img.src = playerSources[0];
+    
+            this.draw = function(){
+                context.drawImage(this.img, this.x, this.y, cellWidth, cellWidth);
+            }
+            this.update = function(){
+                nextX = this.x;
+                nextY = this.y;
+                switch(direction){
+                    case 'up':
+                        this.img.src = playerSources[0];
+                        nextY -= cellWidth;
+                        break;
+                    case 'down':
+                        this.img.src = playerSources[1];
+                        nextY += cellWidth;
+                        break;
+                    case 'right': 
+                        this.img.src = playerSources[2];
+                        nextX += cellWidth;
+                        break;
+                    case 'left':
+                        this.img.src = playerSources[3];
+                        nextX -= cellWidth;
+                        break;
+                }
+                if(!(isCollide(nextX, nextY, direction))){
+                this.x = nextX;
+                this.y = nextY;
+                }
+                direction = 'neutral';
+
+            }
+        }
+        
+        function filledNode(){  
+            var filledNodes = 0;
+            var nodes = 0;
+                for (k in blocks){
+                    if (blocks[k].type == 2)
+                        nodes++;
+                }
+
+                for(i in blocks){
+                    if (blocks[i].type == 2){
+                for (j in blocks){
+                    if (blocks[j].type == 1 && blocks[j].x == blocks[i].x && blocks[j].y == blocks[i].y){
+                        filledNodes++;
+                    }
+                }
+                }
+                }
+                if (filledNodes == nodes)
+                    bc = "blue";
+        }
+        
+        ////-------------------------------------------------------------------------------------------------------
+        var player = new Player(10,10);
+     
+        function isCollide(x1, y1, dir){
+            //return (x1 == x2 && y1 == y2);  
+            for(i in blocks){
+                if (blocks[i].x == x1 && blocks[i].y == y1 && blocks[i].type == 0)
+                    return true;
+                if (blocks[i].x == x1 && blocks[i].y == y1 && blocks[i].type == 1){
+                    switch(direction){
+                        case 'up':
+                            var BlockPos = blockAt(x1,y1-cellWidth);
+                            if (BlockPos != -1){
+                                if (blocks[BlockPos].isSolid)
+                                    return true;
+                            }
+                            blocks[i].y -= cellWidth;
+                            break;
+                        case 'down':
+                            var BlockPos = blockAt(x1,y1+cellWidth);
+                            if (BlockPos != -1){
+                                if (blocks[BlockPos].isSolid)
+                                    return true;
+                            }
+                            blocks[i].y += cellWidth;
+                            break;
+                        case 'right': 
+                            var BlockPos = blockAt(x1+cellWidth,y1);
+                            if (BlockPos != -1){
+                                if (blocks[BlockPos].isSolid)
+                                    return true;
+                            }
+                            blocks[i].x += cellWidth;
+                            break;
+                        case 'left':
+                            var BlockPos = blockAt(x1-cellWidth,y1);
+                            if (BlockPos != -1){
+                                if (blocks[BlockPos].isSolid)
+                                    return true;
+                            }
+                            blocks[i].x -= cellWidth;
+                            break;
+                    }
+
+                }
+            }
+            return false;
+        }
+        //----------------------------------------------------------------------trying to get blue square to move
+        function update(){
+          player.update();
+          filledNode();
+        }
+        ;
+        function draw(){
+          canvas.width = canvas.width;
+          //draw background
+            context.fillStyle = bc;//"#995547";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+          //draw blocks
+            for(var i in blocks)
+                if (blocks[i].type == 0)
+                blocks[i].draw();
+            for(var i in blocks)
+                if (blocks[i].type == 2)
+                blocks[i].draw();
+            for(var i in blocks)
+                if (blocks[i].type == 1)
+                blocks[i].draw();
+            
+            
+            
+          //draw player
+            player.draw();
+        }  
+        
+        function game_loop(){
+          update();
+          draw();
+        }
+      
+      loadLevel(level1);
+      setInterval(game_loop, 30);
+      
+      </script>
+
+  </body>
+</html>
