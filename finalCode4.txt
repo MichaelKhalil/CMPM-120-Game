@@ -1,0 +1,752 @@
+<html>
+  <head>
+    <style>
+      #container{
+        font-family:monospace;
+        font-weight:bold;
+      }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  </head>
+  
+  <body>
+    <canvas id = "finalgame" width = "500" height = "500"></canvas>
+    
+    <script>
+        canvas = document.getElementById('finalgame');
+        context = canvas.getContext('2d');
+        document.addEventListener('keydown', handleKeypress);
+      
+        var cellWidth = canvas.width/25;
+        
+        //assets
+        var sounds = new Array();
+        //                      Block                            move Block                       node                               water
+        var blockSources = new Array("http://imgur.com/wbBhJwz.png", "http://imgur.com/Weo7wKb.png", "http://imgur.com/Ad5ZyRQ.png", "http://i.imgur.com/PP76JCU.png");
+        //                            up                           down                            right                              left
+        var playerSources = new Array("http://imgur.com/Te50MqO.png", "http://imgur.com/hZ9cFbq.png", "http://imgur.com/80z9vLc.png", "http://imgur.com/RfKPi7c.png")
+        //                          title
+        var miscSources = new Array("http://i.imgur.com/YOPMkwO.png","http://i.imgur.com/gMgaDgg.png");
+        var playerImages = new Array();
+        var miscImages = new Array();
+        var blockImages = new Array();
+        var water = new Array();
+        var spreadOnce = false;
+        var test;
+        var score = 1000;
+        
+        //current level
+        var blocks = new Array();
+        
+        //initial state game variables
+        var direction = 'neutral';
+        var currentLevel = -1;
+        var gameState = "menu";
+        var startTime = new Date().getTime();
+        var time = 0; //impliment time-levelTime
+        var levelTime;
+        var totalTime = 0 - time;
+        var levelComplete = true;
+        var timeBool = false;
+        var canLosePoints;
+        
+        //Block types
+        var Block_NONMOVEABLE = 0;
+        var Block_MOVEABLE = 1;
+        var Block_NODE = 2;
+        var bc = "#9b7653";
+        
+
+        function handleKeypress(e){
+            if (gameState == "puzzle")
+            switch(e.keyCode){
+                case 38 : //upwards
+                case 87 :
+                    direction = 'up';
+                    break;
+                case 40 : //downwards
+                case 83 :     
+                    direction = 'down';
+                    break;
+                case 39 : //right
+                case 68 :
+                    direction = 'right';
+                    break;
+                case 37 : //left
+                case 65 :
+                    direction = 'left';
+                    break;
+                case 80 :                    
+                    loadLevel(levels[currentLevel%levels.length]);
+                    break;
+                case 75:
+                    currentLevel++;
+                    levelComplete = true;
+                    break;
+            }
+            switch(e.keyCode){//<------------------------temp
+                case 32 :
+                    gameState = "puzzle";
+                    break;
+            }
+        }
+        
+            
+        function Block(x, y, type){
+            this.x = x*cellWidth;
+            this.y = y*cellWidth;
+            this.type = type;
+            this.isSolid = this.type == Block_MOVEABLE || this.type == Block_NONMOVEABLE ? true : false;
+            this.img = blockImages[this.type];
+            
+            this.draw = function(){
+                context.drawImage(this.img, this.x, this.y, cellWidth, cellWidth);
+            }
+        }
+        /*
+        $(function(){
+        $.get('https://justpaste.it/ubgf', function(data){
+            var array = data.split(',');
+            console.log(array);
+        });
+    });*/
+        
+        function loadLevel(level){
+            startTime = new Date().getTime();
+            levelTime = time;
+            if (timeBool)
+            totalTime +=time;
+            blocks = new Array();
+            water = new Array();
+            for (i in level)
+                for (j in level)
+                    if (level[i][j] == "#")
+                        blocks.push(new Block(j,i,0))      
+            for (i in level)
+                for (j in level)
+                     if (level[i][j] == "@")
+                        blocks.push(new Block(j,i,1))
+            for (i in level)
+                for (j in level)
+                    if (level[i][j] == ".")
+                        blocks.push(new Block(j,i,2))
+            for (i in level)
+                for (j in level)
+                        if (level[i][j] == "&"){
+                        player.x = j*cellWidth;
+                        player.y = i*cellWidth;
+                        //console.log(i);
+                        //console.log(j);
+                        water.push(new Block(j,i,3));
+                    }
+            
+        }
+        
+        function handleTick(){
+            var tickRate = 0;
+            switch ((currentLevel)%levels.length+1){
+                case 1:
+                    tickRate = 2;
+                    break;
+                case 2:
+                    tickRate = 2;
+                    break;
+                case 3:
+                    tickRate = 3;
+                    break;
+                case 4:
+                    tickRate = 2;
+                    break;
+                case 5:
+                    tickRate = 2;
+                    break;
+                case 6:
+                    tickRate = 3;
+                    break;
+                case 7:
+                    tickRate = 3;
+                    break;
+                
+                
+                    
+            }
+            spreadWater(tickRate);
+        }
+        
+        function spreadWater(tr){
+            var spreadRight = true;
+            var spreadUp = true;
+            var spreadLeft = true;
+            var spreadDown = true;
+            
+            if ((time % tr) != 0)
+                spreadOnce = true; 
+            if (((time % tr) == 0) && (spreadOnce)){ 
+               if (water.length < 500)
+                   for (i in water){
+                      spreadRight = true;
+                      spreadUp = true;
+                      spreadLeft = true;
+                      spreadDown = true;
+                       
+                       for (j in water){
+                        if ((water[i].x/cellWidth+1 == (water[j].x)/cellWidth) && (water[i].y/cellWidth == water[j].y/cellWidth))
+                            spreadRight = false;
+                      // }
+                      // for (j in water){
+                        if ((water[i].x/cellWidth == (water[j].x)/cellWidth) && (water[i].y/cellWidth-1 == water[j].y/cellWidth))
+                            spreadUp = false;
+                      // }
+                      // for (j in water){
+                        if ((water[i].x/cellWidth-1 == (water[j].x)/cellWidth) && (water[i].y/cellWidth == water[j].y/cellWidth))
+                            spreadLeft = false;
+                      // }
+                      // for (j in water){
+                        if ((water[i].x/cellWidth == (water[j].x)/cellWidth) && (water[i].y/cellWidth+1 == water[j].y/cellWidth))
+                            spreadDown = false;
+                       }
+                       
+                       for (j in blocks){
+                    if ((water[i].x/cellWidth+1 == (blocks[j].x)/cellWidth) && (water[i].y/cellWidth == blocks[j].y/cellWidth) && (blocks[j].type == 0))
+                        spreadRight = false;
+                    //   for (j in water)
+                    if ((water[i].x/cellWidth == (blocks[j].x)/cellWidth) && (water[i].y/cellWidth-1 == blocks[j].y/cellWidth) && (blocks[j].type == 0))
+                        spreadUp = false;
+                    //   for (j in water)
+                    if ((water[i].x/cellWidth-1 == (blocks[j].x)/cellWidth) && (water[i].y/cellWidth == blocks[j].y/cellWidth) && (blocks[j].type == 0))
+                        spreadLeft = false;
+                    //   for (j in water)
+                    if ((water[i].x/cellWidth == (blocks[j].x)/cellWidth) && (water[i].y/cellWidth+1 == blocks[j].y/cellWidth) && (blocks[j].type == 0))
+                        spreadDown = false;
+                        
+                       }
+                       
+                       
+                       
+                      if (spreadRight){
+                        water.push(new Block((water[i].x/cellWidth)+1, (water[i].y/cellWidth), 3)); 
+                        spreadOnce = false;  
+                      }
+                       if (spreadUp){
+                        water.push(new Block((water[i].x/cellWidth), (water[i].y/cellWidth)-1, 3)); 
+                        spreadOnce = false;  
+                      }
+                       if (spreadLeft){
+                        water.push(new Block((water[i].x/cellWidth)-1, (water[i].y/cellWidth), 3)); 
+                        spreadOnce = false;  
+                      }
+                       if (spreadDown){
+                        water.push(new Block((water[i].x/cellWidth), (water[i].y/cellWidth)+1, 3)); 
+                        spreadOnce = false;  
+                      }
+                      
+                   }
+                       
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   }//time
+                  }//function        
+                   
+                   
+                   
+                   
+                   
+                   
+              /* /* for (i in water) {
+                spreadRight = true;
+
+                   for (j in water)
+                      if ((water[i].x+cellWidth == (water[j].x)) && (water[i].y == water[j].y))
+                        spreadRight = false;
+                   
+                   
+                   
+                  if (spreadRight){
+                  water.push(new Block((water[i].x/cellWidth)+1, water[i].y/cellWidth, 3));
+                   spreadOnce = false;
+                
+                
+                }
+                   
+            }
+                for (i in water) {
+                spreadUp = true;
+                    for (j in water)
+                      if ((water[i].x == (water[j].x)) && (water[i].y+cellWidth == water[j].y)){  //----------------
+                        spreadUp = false;
+                    
+                     if (spreadUp){
+                  water.push(new Block((water[i].x/cellWidth), water[i].y/cellWidth+1, 3)); 
+                   spreadOnce = false;
+                    test = water[i].y;
+                }   
+                
+                      }
+         }
+          
+    }        
+                
+        }//function
+            /*for (i in water){
+                for (j in water){
+                    spreadRight = true;
+                    if ((water[i].x+cellWidth == (water[j].x)) && (water[i].y == water[j].y))
+                        spreadRight = false;
+                }
+                for (j in water)
+                    if ((water[i].x+cellWidth == (blocks[j].x)) && (water[i].y == blocks[j].y) && (blocks[j].type == 0))
+                        spreadRight = false;
+                    
+            // 
+                
+                if (spreadRight){
+            water.push(new Block((water[i].x/cellWidth)+1, water[i].y/cellWidth, 3));
+            spreadOnce = false; 
+                } 
+                
+                
+                
+                
+                if (spreadUp){
+            water.push(new Block((water[i].x/cellWidth), water[i].y/cellWidth-1, 3));
+            spreadOnce = false; 
+                } 
+                 if (spreadLeft){
+            water.push(new Block((water[i].x/cellWidth)-1, water[i].y/cellWidth, 3));
+            spreadOnce = false;
+                 }
+            }
+              
+            }//<*/
+                    
+        
+            
+        
+        //returns index of Block in blocks, -1 if not found
+        function blockAt(x,y){
+            for (var i in blocks){
+                if (blocks[i].x == x && blocks[i].y == y)
+                    return i;
+            }
+            return -1;
+        }
+        
+        function Player(x, y){
+            this.x = x*cellWidth;
+            this.y = y*cellWidth;
+            this.img = playerImages[1];
+    
+            this.draw = function(){
+                context.drawImage(this.img, this.x, this.y, cellWidth, cellWidth);
+            }
+            this.update = function(){
+                nextX = this.x;
+                nextY = this.y;
+                switch(direction){
+                    case 'up':
+                        this.img = playerImages[0];
+                        nextY -= cellWidth;
+                        break;
+                    case 'down':
+                        this.img = playerImages[1];
+                        nextY += cellWidth;
+                        break;
+                    case 'right': 
+                        this.img = playerImages[2];
+                        nextX += cellWidth;
+                        break;
+                    case 'left':
+                        this.img = playerImages[3];
+                        nextX -= cellWidth;
+                        break;
+                }
+                if(!(isCollide(nextX, nextY, direction))){
+                this.x = nextX;
+                this.y = nextY;
+                }
+                
+                direction = 'neutral';
+            }
+        }
+        
+        function filledNode(){  
+            var filledNodes = 0;
+            var nodes = 0;
+                for (k in blocks){
+                    if (blocks[k].type == 2)
+                        nodes++;
+                }
+
+                for(i in blocks){
+                    if (blocks[i].type == 2){
+                for (j in blocks){
+                    if (blocks[j].type == 1 && blocks[j].x == blocks[i].x && blocks[j].y == blocks[i].y){
+                        filledNodes++;
+                    }
+                }
+                }
+                }
+                if (filledNodes == nodes){
+                   
+                    currentLevel++;
+                    levelComplete = true;
+                }
+            
+            for (i in blocks){
+                if (blocks[i].type == 2)
+                    for (k in blocks)
+                    for (j in water){
+                       if (blocks[i].x == water[j].x && blocks[i].y == water[j].y)
+                           if (!(blocks[k] == 1 && blocks[k].x == blocks[i].x && blocks[k].y == blocks[i].y)){
+                               if ((time % 2) != 0)
+                                    canLosePoints = true; 
+                                if (((time % 2) == 0) && (canLosePoints)){ 
+                                    score -=10;
+                                    canLosePoints = false;
+                           }
+                    }
+                }
+                     
+        }
+        }//<-----------------------------------------------need to fix loss of points
+        
+        function isCollide(x1, y1, dir){
+            //return (x1 == x2 && y1 == y2);  
+            for(i in blocks){
+                if (blocks[i].x == x1 && blocks[i].y == y1 && blocks[i].type == 0)
+                    return true;
+                if (blocks[i].x == x1 && blocks[i].y == y1 && blocks[i].type == 1){
+                    switch(direction){
+                        case 'up':
+                            var BlockPos = blockAt(x1,y1-cellWidth);
+                            if (BlockPos != -1){
+                                if (blocks[BlockPos].isSolid)
+                                    return true;
+                            }
+                            blocks[i].y -= cellWidth;
+                            break;
+                        case 'down':
+                            var BlockPos = blockAt(x1,y1+cellWidth);
+                            if (BlockPos != -1){
+                                if (blocks[BlockPos].isSolid)
+                                    return true;
+                            }
+                            blocks[i].y += cellWidth;
+                            break;
+                        case 'right': 
+                            var BlockPos = blockAt(x1+cellWidth,y1);
+                            if (BlockPos != -1){
+                                if (blocks[BlockPos].isSolid)
+                                    return true;
+                            }
+                            blocks[i].x += cellWidth;
+                            break;
+                        case 'left':
+                            var BlockPos = blockAt(x1-cellWidth,y1);
+                            if (BlockPos != -1){
+                                if (blocks[BlockPos].isSolid)
+                                    return true;
+                            }
+                            blocks[i].x -= cellWidth;
+                            break;
+                    }
+
+                }
+            }
+            return false;
+        }
+       
+        function update(){
+           
+        time = parseInt((new Date().getTime()-startTime)/1000, 10);
+          player.update();
+          filledNode();
+            if (levelComplete){
+                loadLevel(levels[currentLevel%levels.length]);
+                levelComplete = false;
+            }
+          handleTick();
+          timeBool = true;
+        }
+        
+        function menuUpdate(){
+            
+        }
+        
+        function menuDraw(){
+            canvas.width = canvas.width;
+            menuBackground = miscImages[0];
+            context.drawImage(menuBackground, 0, 0, canvas.width, canvas.height);
+        }
+        
+
+        function draw(){
+          canvas.width = canvas.width;
+          //draw background
+            context.fillStyle = bc;//"#995547";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+          //draw blocks
+            for(var i in blocks)
+                if (blocks[i].type == 0)
+                blocks[i].draw();
+            for (var i in water)
+                water[i].draw();
+            for(var i in blocks)
+                if (blocks[i].type == 2)
+                blocks[i].draw();
+            for(var i in blocks)
+                if (blocks[i].type == 1)
+                blocks[i].draw();
+
+          //draw player
+            player.draw();
+            
+          //draw timer<-------------------------------------------------------------------------------------------temp
+            context.fillStyle = "white";
+            context.font = "30px Comic Sans MS";
+            context.fillText("Level: "+((currentLevel)%levels.length+1), 20, canvas.height-120);
+            context.fillText("Current: "+ time, 20, canvas.height-80);                                  //time
+            context.fillText("Total: "+ score, 20, canvas.height-40);              //totalTime
+
+        }  
+        
+        function loadAssets(){
+            for (var i in playerSources){
+                playerImages.push(new Image());
+                playerImages[i].src = playerSources[i];
+            }
+            for (var i in blockSources){
+                blockImages.push(new Image());
+                blockImages[i].src = blockSources[i];
+            }
+            for (var i in miscSources){
+                miscImages.push(new Image());
+                miscImages[i].src = miscSources[i];
+            }
+        }
+        
+        function game_loop(){
+          if (gameState == "menu"){
+          menuUpdate();
+          menuDraw();
+          }
+          if (gameState == "puzzle"){
+ 
+          update();
+          draw();
+          }
+            
+        }
+       
+      
+      loadAssets();
+      var player = new Player(10,10);
+      setInterval(game_loop, 30);
+        
+        var level1 = new Array(
+    "                         ",
+    "          ###            ",
+    "          #&#            ",
+    "          #@#            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          # #            ",
+    "          #.#            ",
+    "          ###            ",
+    "                         ");
+        var level2 = new Array(
+    "                         ",
+    "                         ",
+    "    ##############       ",
+    "    #####   ######       ",
+    "    #.           #       ",
+    "    ###### ###@# #       ",
+    "    # @     .# # #       ",
+    "    # #### ### # #       ",
+    "    #.        @  #       ",
+    "    ###### #######       ",
+    "        #   #            ",
+    "        # & #            ",
+    "        #####            ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ");
+        var level3 = new Array(
+    "#########################",
+    "# ########   ####.###   #",
+    "# # @               #   #",
+    "# #&@ #####.#### @ ##   #",
+    "# #   #   ###  ## ##    #",
+    "# #####         # #     #",
+    "#               # #     #",
+    "#               # ###   #",
+    "#      ####     #   #   #",
+    "#      #  ####### # #   #",
+    "#      #.           #   #",
+    "#      #  ###########   #",
+    "#      ####             #",
+    "#                       #",
+    "#                       #",
+    "#                       #",
+    "#                       #",
+    "#                       #",
+    "#                       #",
+    "#                       #",
+    "#                       #",
+    "#                       #",
+    "#                       #",
+    "#                       #",
+    "#########################");
+        //LIST OF LEVELS (temp)
+            var level4 = new Array(       
+    "                         ",
+    "           ###           ",
+    "           #&#           ",
+    "          #.@.#          ",
+    "         #     #         ",
+    "        #.# @ #.#        ",
+    "        #   @   #        ",
+    "        #   @   #        ",
+    "         #  @  #         ",
+    "          #   #          ",
+    "           #.#           ",
+    "            #            ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ");
+        var level5 = new Array(
+    "                         ",
+    " ####################### ",
+    " ##&#################### ",
+    " ##  ##                # ",
+    " ##                    # ",
+    " #  # #                # ",
+    " #   .# ##########   ### ",
+    " #   ## ########## @ # # ",
+    " #################   # # ",
+    " #  #      #         # # ",
+    " # @##       #  #  # ### ",
+    " #  #    #         #.#.# ",
+    " #  #  #  #  #    #### # ",
+    " #  #   #      ####    # ",
+    " #     #   # # #  # #  # ",
+    " #             #  @ #  # ",
+    " #    ##########  # ## # ",
+    " #    #        # .# #  # ",
+    " #    #       @ # # #  # ",
+    " #    #   ###   # # ## # ",
+    " #    ##     ###  # #  # ",
+    " #    ##               # ",
+    " #                     # ",
+    " ####################### ",
+    "                         ");
+        var level6 = new Array(
+    "                         ",
+    "                         ",
+    "                         ",
+    "      #############      ",
+    "     ###############     ",
+    "    ##             ##    ",
+    "   ##           @   ##   ",
+    "  ## &    @          ##  ",
+    " ##     ##..###.#     ## ",
+    " ##    .       @ #    ## ",
+    " #######    ### @.    ## ",
+    " ##    #   @# #  #    ## ",
+    " ##    .    ###@ #    ## ",
+    " #######         #    ## ",
+    " ##     ##.####.#     ## ",
+    " ##       @    @      ## ",
+    "  ##                 ##  ",
+    "   ##               ##   ",
+    "    ##             ##    ",
+    "     ###############     ",
+    "      #############      ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ");  
+        var level7 = new Array(
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "       #########         ",
+    "       #       #         ",
+    "      ##    @  #         ",
+    "      # @##@   #         ",
+    "      #  ## @  #         ",
+    "      #  #  #  #         ",
+    "      # @#&##@##         ",
+    "      #  @     #         ",
+    "      ###@ ##  ###       ",
+    "      #     #@ @ #       ",
+    "      #     #    #       ",
+    "      #.....######       ",
+    "      #.....#            ",
+    "      #######            ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ",
+    "                         ");
+        
+
+        
+
+
+
+        
+
+        
+
+
+      
+        var levels = new Array;
+        levels.push(level1, level2, level3, level4, level5, level6, level7);
+      
+      </script>
+
+  </body>
+</html>
